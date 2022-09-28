@@ -1,0 +1,94 @@
+---
+- name: Reading config
+  ansible.builtin.include_vars:
+    file: config.yml
+    name: config
+
+- name: Set server_id
+  community.mysql.mysql_variables:
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+    variable: server_id
+    value: "{{ config.mysql_id_slave }}"
+    mode: persist
+
+- name: Launching replication
+  community.mysql.mysql_replication:
+    mode: "{{ item }}"
+    primary_auto_position: true
+    config_file: ""
+    login_user: root
+    login_host: localhost
+    login_password: "{{ config.mysql_root_password }}"
+    primary_host: "{{ config.mysql_master }}"
+    primary_user: "{{ config.mysql_replication_user }}"
+    primary_password: "{{ config.mysql_replication_password }}"
+  loop:
+    - stopreplica
+    - changeprimary
+    - startreplica
+    - getreplica
+  register: repl_stat
+
+- name: oOo
+  ansible.builtin.debug:
+    var: repl_stat
+# - name: Setting replication
+#   community.mysql.mysql_replication:
+#     mode: changeprimary
+#     primary_auto_position: true
+#     config_file: ""
+#     login_user: root
+#     login_host: localhost
+#     login_password: "{{ config.mysql_root_password }}"
+#     primary_host: "{{ config.mysql_master }}"
+#     primary_user: "{{ config.mysql_replication_user }}"
+#     primary_password: "{{ config.mysql_replication_password }}"
+
+# - name: Starting replication
+#   community.mysql.mysql_replication:
+#     mode: startreplica
+#     primary_auto_position: true
+#     config_file: ""
+#     login_user: root
+#     login_host: localhost
+#     login_password: "{{ config.mysql_root_password }}"
+#     primary_host: "{{ config.mysql_master }}"
+#     primary_user: "{{ config.mysql_replication_user }}"
+#     primary_password: "{{ config.mysql_replication_password }}"
+
+# - name: Getting replication status
+#   community.mysql.mysql_replication:
+#     mode: getreplica
+#     primary_auto_position: true
+#     config_file: ""
+#     login_user: root
+#     login_host: localhost
+#     login_password: "{{ config.mysql_root_password }}"
+#   register: repl_stat
+# - name:
+#   ansible.builtin.debug:
+#     var: repl_stat
+
+#   register:  p
+# - name:
+#   ansible.builtin.debug:
+#     var: p
+
+# - name: Start MySQL replica process
+#   become: true
+#   community.mysql.mysql_replication:
+#     mode: startreplica
+#     config_file: ""
+#     login_user: root
+#     login_host: localhost
+#     login_password: "{{ config.mysql_root_password }}"
+#     primary_host: "{{ config.mysql_master }}"
+#     primary_user: "{{ config.mysql_replication_user }}"
+#     primary_password: "{{ config.mysql_replication_password }}"
+#     primary_log_pos: "{{ primary_info.Position | int }}"
+#     primary_log_file: "{{ primary_info['File'] }}"
+#   register: p
+# - name:
+#   ansible.builtin.debug:
+#     var: p

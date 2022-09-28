@@ -1,6 +1,9 @@
 # Local .terraform directories
 **/.terraform/*
 
+# Local .vagrant directories
+**/.vagrant/*
+
 # .tfstate files
 *.tfstate
 *.tfstate.*
@@ -27,3 +30,10 @@ override.tf.json
 
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
+
+# Vagrant binary images.
+*.box
+*.vmdk
+
+# Certificates
+*.pem

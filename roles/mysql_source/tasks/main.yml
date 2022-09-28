@@ -1,0 +1,42 @@
+---
+- name: Reading config
+  ansible.builtin.include_vars:
+    file: config.yml
+    name: config
+
+- name: Set server_id
+  community.mysql.mysql_variables:
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+    variable: server_id
+    value: "{{ config.mysql_id_master }}"
+    mode: persist
+
+- name: Create MySQL user for replication on primary
+  become: true
+  community.mysql.mysql_user:
+    name: "{{ config.mysql_replication_user }}"
+    host: "{{ config.mysql_replica }}"
+    password: "{{ config.mysql_replication_password }}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+
+- name: Create database for the application
+  community.mysql.mysql_db:
+    name: "{{ config.mysql_app_db }}"
+    state: present
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+
+- name: Create user for the application
+  community.mysql.mysql_user:
+    name: "{{ config.mysql_app_user }}"
+    host: "{{ config.app_upstream }}"
+    password: "{{ config.mysql_app_password }}"
+    # GRANT ALL PRIVILEGES ON databasename.* TO "wordpressusername"@"hostname"
+    priv: "{{ config.mysql_app_db }}.*:ALL"
+    state: present
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"

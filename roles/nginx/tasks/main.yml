@@ -1,0 +1,142 @@
+---
+- name: Reading config
+  ansible.builtin.include_vars:
+    file: config.yml
+    name: config
+
+- name: Check DNS
+  ansible.builtin.uri:
+    url: http://myip.wtf/text
+    return_content: yes
+  register: this
+
+- name: Install NGINX from OS repo
+  become: true
+  ansible.builtin.apt:
+    name: nginx-full
+
+- name: Creating nginx.conf
+  become: true
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: true
+    mode: 0644
+    owner: root
+
+- name: Disable all sites
+  become: true
+  block:
+    - name: deleting sites-enabled
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled
+        state: absent
+    - name: creating sites-enabled
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+
+- name: Creating app.conf
+  become: true
+  block:
+    - name: templating
+      ansible.builtin.template:
+        src: app.conf.j2
+        dest: /etc/nginx/sites-available/app.conf
+        backup: true
+        mode: 0644
+        owner: root
+    - name: linking
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/app.conf
+        dest: /etc/nginx/sites-enabled/app.conf
+        owner: root
+        group: root
+        state: link
+
+- name: Creating gitlab.conf
+  become: true
+  block:
+    - name: templating
+      ansible.builtin.template:
+        src: gitlab.conf.j2
+        dest: /etc/nginx/sites-available/gitlab.conf
+        backup: true
+        mode: 0644
+        owner: root
+    - name: linking
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/gitlab.conf
+        dest: /etc/nginx/sites-enabled/gitlab.conf
+        owner: root
+        group: root
+        state: link
+
+- name: Install snapd
+  become: true
+  ansible.builtin.apt:
+    name: snapd
+    state: latest
+- name: Install snap core
+  ansible.builtin.shell:
+    cmd: "sudo snap install core && sudo snap install hello-world && /snap/bin/hello-world"
+  register: r
+  changed_when: '''"hello-world" is already installed'' not in r.stderr'
+  failed_when: '"Hello World!" not in r.stdout'
+
+- name: Remove certbot-auto and any Certbot OS packages
+  ansible.builtin.apt:
+    name: certbot
+    state: absent
+
+- name: Install Certbot
+  ansible.builtin.command:
+    cmd: "sudo snap install --classic certbot"
+  register: r
+  changed_when: "'is already installed' not in r.stderr"
+- name: Prepare the Certbot command
+  become: true
+  ansible.builtin.file:
+    state: link
+    src: "/snap/bin/certbot"
+    path: "/usr/bin/certbot"
+- name: Install letsencrypt certificates
+  # Yes, we know about ansible.builtin.acme_certificate. We just aren't using it.
+  # letsencrypt_use_stage
+  block:
+    - name: "{{ config.gitlab_domain }}"
+      ansible.builtin.command:
+        cmd: "sudo certbot --nginx --noninteractive --agree-tos {{ config.certbot_args }} -d {{ config.gitlab_domain }}"
+    - name: "{{ config.www_domain }}"
+      ansible.builtin.command:
+        cmd: "sudo certbot --nginx --noninteractive --agree-tos {{ config.certbot_args }} -d {{ config.www_domain }}"
+##
+## Так можно установить NGINX из собственного репозитория, а не из репозитория ОС.
+##
+# - name: Установить пакеты, необходимые для подключения apt-репозитория
+#   become: true
+#   ansible.builtin.apt:
+#     name:
+#       - curl
+#       - gnupg2
+#       - ca-certificates
+#       - lsb-release
+#       - debian-archive-keyring
+# - name: Import NGINX GPG key
+#   become: true
+#   ansible.builtin.apt_key:
+#     url: https://nginx.org/keys/nginx_signing.key
+#     state: present
+# - name: Add repository
+#   become: true
+#   ansible.builtin.apt_repository:
+#     repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/debian `lsb_release -cs` nginx"
+# - name: Pin repo
+#   become: true
+#   ansible.builtin.lineinfile:
+#     path: /etc/apt/preferences.d/99nginx
+#     line: "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n"
+#     state: present

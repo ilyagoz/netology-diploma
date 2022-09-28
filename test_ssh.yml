@@ -1,0 +1,5 @@
+---
+- name: Check SSH connections to targets.
+  hosts: all
+  tasks:
+  - action: ping

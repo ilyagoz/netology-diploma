@@ -1,0 +1,3 @@
+- name: gitlab-ctl reconfigure
+  ansible.builtin.command:
+    cmd: sudo gitlab-ctl reconfigure

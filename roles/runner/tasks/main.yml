@@ -1,0 +1,70 @@
+---
+- name: Reading config
+  ansible.builtin.include_vars:
+    file: config.yml
+    name: config
+
+- name: Install Ansible from repo
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    name: ansible
+
+- name: Install Docker Engine
+  become: true
+  block:
+    - name: remove other versions of docker
+      ansible.builtin.apt:
+        name:
+          - docker
+          - docker-engine
+          - docker.io
+          - containerd
+          - runcansible
+        state: absent
+    - name: install repo key for docker for debian
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        keyring: /etc/apt/trusted.gpg.d/docker.gpg
+        state: present
+    - name: add repo for docker for debian
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.gpg] https://download.docker.com/linux/debian {{ ansible_facts['distribution_release'] }} stable"
+        state: present
+    - name: install docker for debian
+      ansible.builtin.apt:
+        update_cache: true
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+
+- name: Install Gitlab runner
+  become: true
+  block:
+    - name: oOo
+      ansible.builtin.shell:
+        cmd: 'curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash'
+    - name: oOoOo
+      ansible.builtin.apt:
+        update_cache: true
+        name: gitlab-runner
+
+- name: Copying key
+  become: true
+  ansible.builtin.copy:
+    src: ~/.ssh/id_rsa_yc
+    dest: /home/gitlab-runner/.ssh/
+    mode: 0400
+
+- name: Get self-signed certificate from the gitlab instance
+  become: true
+  block:
+    - name: oOo
+      ansible.builtin.shell:
+        cmd: "openssl s_client -showcerts -connect {{ config.gitlab_upstream }}:443 -servername {{ config.gitlab_upstream }} < /dev/null 2>/dev/null | openssl x509 -outform PEM > /usr/local/share/ca-certificates/{{ config.gitlab_upstream }}.crt"
+        creates: "/usr/local/share/ca-certificates/{{ config.gitlab_upstream }}.crt"
+    - name: oOoOo
+      ansible.builtin.shell:
+        cmd: "/sbin/update-ca-certificates"

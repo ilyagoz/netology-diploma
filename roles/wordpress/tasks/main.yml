@@ -1,0 +1,157 @@
+---
+- name: Reading config
+  ansible.builtin.include_vars:
+    file: config.yml
+    name: config
+
+- name: Install prerequisites
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - unzip
+    - ssl-cert
+
+- name: Install NGINX from OS repo
+  become: true
+  ansible.builtin.apt:
+    name: nginx-full
+
+- name: Install PHP
+  become: true
+  ansible.builtin.apt:
+    name:
+      - php-fpm
+      - php-mysql
+      - php-curl
+      - php-imagick
+      - php-intl
+      - php-opcache
+      - php-memcached
+      - php-tidy
+
+- name: Create nginx.conf
+  become: true
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: true
+    mode: 0644
+    owner: root
+
+- name: Disable all sites
+  become: true
+  block:
+    - name: deleting sites-enabled
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled
+        state: absent
+    - name: creating sites-enabled
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+
+- name: Create app.conf
+  become: true
+  block:
+    - name: generate from template
+      ansible.builtin.template:
+        src: app.conf.j2
+        dest: /etc/nginx/sites-available/app.conf
+        backup: true
+        mode: 0644
+        owner: root
+    - name: link to sites-enabled
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/app.conf
+        dest: /etc/nginx/sites-enabled/app.conf
+        owner: root
+        group: root
+        state: link
+
+- name: Disable all fpm pools
+  become: true
+  block:
+    - name: delete pool.d
+      ansible.builtin.file:
+        path: /etc/php/7.4/fpm/pool.d
+        state: absent
+    - name: create empty pool.d
+      ansible.builtin.file:
+        path: /etc/php/7.4/fpm/pool.d
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+
+- name: Configure php-fpm
+  become: true
+  ansible.builtin.template:
+    src: wordpress_pool.conf.j2
+    dest: /etc/php/7.4/fpm/pool.d/wordpress_pool.conf
+    backup: false
+    group: "root"
+    owner: "root"
+    mode: 0644
+  notify:
+    - Restart php-fpm
+
+# /etc/php/7.4/fpm/php-fpm.conf менять не нужно.
+
+- name: Create WP directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ config.app_doc_root }}"
+    group: "{{ config.nginx_group }}"
+    owner: "{{ config.nginx_owner }}"
+    state: directory
+    mode: "0750"
+
+- name: Download and unpack latest WordPress
+  become: true
+  ansible.builtin.unarchive:
+    #src: files/wordpress-6.0.2.zip
+    src: "https://wordpress.org/latest.zip"
+    dest: "/tmp"
+    remote_src: true
+    mode: "0750"
+    creates: "/tmp/wordpress/wp-config-sample.php"
+    group: "{{ config.nginx_group }}"
+    owner: "{{ config.nginx_owner }}"
+- name: Copy to WP directory
+  become: true
+  ansible.builtin.copy:
+    src: "/tmp/wordpress/"
+    remote_src: true
+    dest: "{{ config.app_doc_root }}"
+    group: "{{ config.nginx_group }}"
+    owner: "{{ config.nginx_owner }}"
+    mode: "0750"
+- name: Create test file
+  become: true
+  ansible.builtin.lineinfile:
+    create: true
+    group: "{{ config.nginx_group }}"
+    owner: "{{ config.nginx_owner }}"
+    mode: "0750"
+    path: "{{ config.app_doc_root }}/info.php"
+    line: "<?php echo phpinfo();?>"
+
+- name: Restaring FastCGI
+  become: true
+  ansible.builtin.service:
+    name: php7.4-fpm
+    state: restarted
+
+- name: Set up wp-config
+  become: true
+  ansible.builtin.template:
+    src: "wp-config.php.j2"
+    dest: "{{ config.app_doc_root }}/wp-config.php"
+    group: "{{ config.nginx_group }}"
+    owner: "{{ config.nginx_owner }}"
+    mode: "0640"

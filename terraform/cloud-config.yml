@@ -1,0 +1,8 @@
+#cloud-config
+users:
+  - name: ivg
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDOKDlSaRosqeo148u3eS/e2B9i+eyS4I17ct7GbHTxG3QSZX3IugZa8sWMzUv8b2pIt0TWhK7qd/3schbygox/4UPqgJh4X2zkd7jojqhfUGSPr54WhIa9r/IuQbtXDc/Uh6g+y1oRgywIClCdJv0onGCN9FUrmhhecDX9fDQWY0ZJLMhW3Hw05B9WPLC/OFFwTzNfpAT8FcPH1NJJKL4yU+1uUdMlcRS1br+hVEL0EYGTDzILtV5dWihrbmGD2HZJyIj7z69JSIDxr8GHUYsLI/WupbHCyQVvZnU1gxsesivRB+GPxZaJi54JjUeWKoOPB4a2Cn7bbQTokWfn9nw1 ivg@DESKTOP-U11D1U8

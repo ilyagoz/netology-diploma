@@ -1,0 +1,109 @@
+---
+- name: Reading config
+  ansible.builtin.include_vars:
+    file: config.yml
+    name: config
+
+- name: Checking if debconf already populated
+  become: true
+  ansible.builtin.debconf:
+    name: mysql-server
+  register: r
+
+- name: Setting debconf variables
+  # Ref. https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#repo-qg-apt-repo-non-insteractive
+  no_log: true
+  when: '"mysql-community-server/root-pass" not in r.current'
+  become: true
+  ansible.builtin.debconf:
+    name: mysql-server
+    question: "{{ item.question }}"
+    value: "{{ item.value }}"
+    vtype: "{{ item.vtype }}"
+  loop:
+    - {
+        question: "mysql-community-server/root-pass",
+        vtype: "password",
+        value: "{{ config.mysql_root_password }}",
+      }
+    - {
+        question: "mysql-community-server/re-root-pass",
+        vtype: "password",
+        value: "{{ config.mysql_root_password }}",
+      }
+    - {
+        question: "mysql-community-server/remove-data-dir",
+        vtype: "boolean",
+        value: false,
+      }
+    - {
+        question: "mysql-server/default-auth-override",
+        vtype: "select",
+        value: "caching_sha2_password",
+      }
+    - {
+        question: "mysql-server/lowercase-table-names",
+        vtype: "select",
+        value: "Enabled",
+      }
+
+- name: Installing from repo
+  block:
+    - name: Installing GPG
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        name: gpg
+    - name: Copying GPG key
+      ansible.builtin.copy:
+        src: files/mysql_pubkey.asc
+        dest: mysql_pubkey.asc
+    - name: Import GPG key
+      become: true
+      ansible.builtin.apt_key:
+        file: mysql_pubkey.asc
+    - name: Add repo
+      become: true
+      ansible.builtin.apt_repository:
+        repo: deb http://repo.mysql.com/apt/debian bullseye mysql-8.0
+        state: present
+    - name: Installing
+      become: true
+      block:
+        - name: apt mysql-server
+          become: true
+          ansible.builtin.apt:
+            update_cache: true
+            name: mysql-server
+        - name: apt python3-pymysql
+          become: true
+          ansible.builtin.apt:
+            name: python3-pymysql
+
+- name: Setting database for replication in mysqld.cnf
+  become: true
+  ansible.builtin.blockinfile:
+    create: true
+    path: "/etc/mysql/mysql.conf.d/mysqld.cnf"
+    block: |
+      binlog_do_db  = "{{ config.mysql_app_db }}"
+      gtid_mode=ON
+      enforce-gtid-consistency=ON
+  notify:
+    - Restart MySQL
+
+- name: Create user for the application
+  community.mysql.mysql_user:
+    name: "{{ config.mysql_app_user }}"
+    host: "{{ config.app_upstream }}"
+    password: "{{ config.mysql_app_password }}"
+    # GRANT ALL PRIVILEGES ON databasename.* TO "wordpressusername"@"hostname"
+    priv: "{{ config.mysql_app_db }}.*:ALL"
+    state: present
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+
+- name: Ensure MySQL is running
+  ansible.builtin.service:
+    name: mysql
+    state: started

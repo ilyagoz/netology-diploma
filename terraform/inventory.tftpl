@@ -1,0 +1,15 @@
+[jump]
+${jump}
+
+[www]
+${nginx}
+
+[db]
+${db01} ansible_connection=ssh ansible_user=ivg ansible_ssh_private_key_file=~/.ssh/id_rsa_yc.key
+${db02}
+
+[db:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -q yc_jump"'
+
+[app1]
+${app}
