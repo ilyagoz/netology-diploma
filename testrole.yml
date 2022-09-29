@@ -12,13 +12,13 @@
 #   roles:
 #     - gitlab
 
-#- hosts: runner
-#  roles:
-#    - runner
+- hosts: runner
+  roles:
+    - runner
 # - hosts: www
 #   roles:
 #     - nginx
 
-- hosts: app
-  roles:
-    - wordpress
+#- hosts: app
+#  roles:
+#    - wordpress

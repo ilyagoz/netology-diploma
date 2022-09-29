@@ -57,6 +57,7 @@
     src: ~/.ssh/id_rsa_yc
     dest: /home/gitlab-runner/.ssh/
     mode: 0400
+    owner: gitlab-runner
 
 - name: Get self-signed certificate from the gitlab instance
   become: true
