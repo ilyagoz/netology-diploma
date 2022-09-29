@@ -51,13 +51,30 @@
         update_cache: true
         name: gitlab-runner
 
-- name: Copying key
+- name: Setup SSH for gitlab-runner
   become: true
-  ansible.builtin.copy:
-    src: ~/.ssh/id_rsa_yc
-    dest: /home/gitlab-runner/.ssh/
-    mode: 0400
-    owner: gitlab-runner
+  block:
+    - name: creating ~/.ssh for gitlab-runner
+      ansible.builtin.file:
+        path: /home/gitlab-runner/.ssh/
+        owner: gitlab-runner
+        group: gitlab-runner
+        state: directory
+    - name: copying key to ~/.ssh for gitlab-runner
+      ansible.builtin.copy:
+        src: ~/.ssh/id_rsa_yc
+        dest: /home/gitlab-runner/.ssh/
+        mode: 0400
+        owner: gitlab-runner
+        group: gitlab-runner
+    - name: ~/.ssh/config
+      ansible.builtin.template:
+        src: config.j2
+        dest: /home/gitlab-runner/.ssh/config
+        backup: false
+        mode: 0400
+        owner: gitlab-runner
+        group: gitlab-runner
 
 - name: Get self-signed certificate from the gitlab instance
   become: true

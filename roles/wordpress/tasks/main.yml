@@ -114,12 +114,12 @@
 - name: Download and unpack latest WordPress
   become: true
   ansible.builtin.unarchive:
-    #src: files/wordpress-6.0.2.zip
-    src: "https://wordpress.org/latest.zip"
+    src: files/wordpress.tar.gz
+    #src: "https://wordpress.org/latest.zip"
     dest: "/tmp"
-    remote_src: true
+    #remote_src: true
     mode: "0750"
-    creates: "/tmp/wordpress/wp-config-sample.php"
+    #creates: "/tmp/wordpress/wp-config-sample.php"
     group: "{{ config.nginx_group }}"
     owner: "{{ config.nginx_owner }}"
 - name: Copy to WP directory
