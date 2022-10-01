@@ -1,0 +1,19 @@
+stages:
+  - build_and_deploy
+  - cleanup
+
+ramirez_do_everything:
+  stage: build_and_deploy
+  script:
+    - install-scripts/deploy.sh
+  artifacts:
+    paths:
+      - install-scripts/archive.tar.gz
+
+clean:
+  stage: cleanup
+  when: always
+  script:
+    - echo "Time to clean up"
+  after_script:
+    - rm -rf $CI_PROJECT_DIR

@@ -1,0 +1,13 @@
+- name: deploy prometheus-node-exporter
+  hosts:
+    - app
+    - db01
+    - db02
+    - www
+    - gitlab
+  tasks:
+    - name: install
+      become: true
+      ansible.builtin.apt:
+        name: prometheus-node-exporter
+        state: present

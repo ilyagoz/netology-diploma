@@ -1,0 +1,55 @@
+# this is required to proxy Grafana Live WebSocket connections.
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+
+server {
+    server_name {{ config.grafana_domain }};
+    access_log /var/log/nginx/{{ config.grafana_domain }}.log;
+    error_log /var/log/nginx/{{ config.grafana_domain }}.log;
+
+    location / {
+        #set $upstream_endpoint http://{{ config.monitoring_upstream }}:3000;
+        proxy_pass http://{{ config.monitoring_upstream }}:3000;
+
+        ## proxy_pass http://gitlab;
+
+        client_max_body_size 0;
+        gzip off;
+
+        #proxy_read_timeout 300;
+        #proxy_connect_timeout 300;
+        #proxy_redirect off;
+
+        proxy_set_header Host $http_host;
+        
+        #proxy_set_header Host $host;
+        #proxy_set_header X-Real-IP $remote_addr;
+        #proxy_set_header X-Forwarded-Ssl on;
+        #proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        #proxy_set_header X-Forwarded-Proto $scheme;
+
+        #proxy_buffering off;
+        #proxy_http_version 1.1;
+    }
+
+    location /api/live/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $http_host;
+        
+        # set $upstream_endpoint http://{{ config.monitoring_upstream }}:3000;
+        # proxy_pass $upstream_endpoint;
+        proxy_pass http://{{ config.monitoring_upstream }}:3000;
+    }
+
+## These should be set by Certbot
+#    listen 443 ssl; 
+#    ssl_certificate /etc/letsencrypt/live/{{ config.gitlab_domain }}/fullchain.pem; 
+#    ssl_certificate_key /etc/letsencrypt/live/{{ config.gitlab_domain }}/privkey.pem;
+#    include /etc/letsencrypt/options-ssl-nginx.conf;
+#    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
+
+}

@@ -16,13 +16,12 @@ gitlab_domain: gitlab.dev.cbg.ru
 grafana_domain: grafana.dev.cbg.ru
 prometheus_domain: prometheus.dev.cbg.ru
 alertmanager_domain: alertmanager.dev.cbg.ru
-runner_domain: runner.dev.cbg.ru
 
 ## Настройки для получения сертификата Let's Encrypt.
 #  Дополнительные параметры для certbot. Не забудьте подставить свой адрес.
 #  Уберите --test-cert, если нужен действительный сертификат.
 #  Запускаться будет как certbot --nginx --noninteractive --agree-tos <дополнительные параметры> -d <имя домена>
-certbot_args: "--email ivgrand@gmail.com --test-cert"
+certbot_args: "--email <адрес электронной почты>"
 
 ## Настройки MySQL. Пароли к базе данных зашифрованы очень сложным паролем,
 #  запускайте ansible-playbook с ключом --ask-vault-password.
@@ -70,6 +69,15 @@ mysql_replica: "db02.ru-central1.internal"
 mysql_id_master: 10
 mysql_id_slave: 20
 
+my_sql_grafana_user: "grafanaReader"
+my_sql_grafana_user_password: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  66613466616131643464356266663231336238386563366562306263366132336430326363653866
+  3635346562333564313963663032356464623665363330300a616566343036333239633834323838
+  31393530386565393230383535323735376536653436313933656661353066386538643837663561
+  3331326635333934620a643865613839326536353664343131653366393236346635393137613531
+  65303663613562386636636662343633383331643637613966653134636436653463
+
 # Настройки обратного проксирования NGINX
 # Имя сервера во внутренней сети, где установлен основной обратный прокси.
 # Это машина, на которую выделяется статический внешний IP.
@@ -79,6 +87,9 @@ rev_proxy_domain: nginx.ru-central1.internal
 app_upstream: app.ru-central1.internal
 # Машина, на которой работает Gitlab
 gitlab_upstream: gitlab.ru-central1.internal
+
+# Машина, на которой работают Prometheus, Alert Manager и Grafana
+monitoring_upstream: monitoring.ru-central1.internal
 
 # Должен соответствовать resource "yandex_vpc_subnet" "subnet-a" в конфигурации терраформа.
 # TODO: автоматизировать генерацию
@@ -91,3 +102,12 @@ app_doc_root: "/var/www/wordpress"
 # Пользователь, от имени которого работают NGINX на прокси и на сервере приложения.
 nginx_owner: www-data
 nginx_group: www-data
+
+# Настройки Alert Manager
+alertmanager_to: <адрес>
+alertmanager_from: "alert.manager@inbox.ru"
+alertmanager_smarthost: "smtp.mail.ru:465"
+alertmanager_require_tls: false
+alertmanager_auth_username: "alert.manager@inbox.ru"
+alertmanager_auth_identity: "alert.manager@inbox.ru"
+alertmanager_auth_password: <пароль>

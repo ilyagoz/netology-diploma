@@ -8,9 +8,26 @@
 # So much for idempotency. Или привязывать таблицы маршрутизации вручную после отработки
 # terraform apply. 
 
-variable "folder_id" {
+# Имеющиеся каталоги: 
+# +----------------------+-----------------------+--------+--------+
+# |          ID          |         NAME          | LABELS | STATUS |
+# +----------------------+-----------------------+--------+--------+
+# | b1ggier8f3m51vu1sktu | default               |        | ACTIVE |
+# | b1g8ok924udnrjpvt6e2 | netology-diploma      |        | ACTIVE |
+# | b1gqei70aff6i0as1u4h | netology-diploma-prod |        | ACTIVE |
+# +----------------------+-----------------------+--------+--------+
+#
+# netology-diploma-prod - каталог для "продакшен".
+# Для развертывания инфраструктуры в этом каталоге нужно переключить workspace на 
+# "prod". Для развертывания инфраструктуры в каталоге netology-diploma - на "stage".
+
+variable "folder_id_stage" {
   type    = string
   default = "b1g8ok924udnrjpvt6e2"
+}
+variable "folder_id_prod" {
+  type    = string
+  default = "b1gqei70aff6i0as1u4h"
 }
 variable "cloud_id" {
   type    = string
@@ -20,10 +37,9 @@ variable "zone" {
   type    = string
   default = "ru-central1-a"
 }
-
 provider "yandex" {
   cloud_id  = var.cloud_id
-  folder_id = var.folder_id
+  folder_id = "${terraform.workspace == "stage" ? var.folder_id_stage : var.folder_id_prod}"
   zone      = var.zone
 }
 
@@ -51,7 +67,7 @@ resource "yandex_dns_zone" "dev-cbg-ru" {
 }
 
 locals {
-  domain_names = ["www", "app", "gitlab", "prometheus", "grafana", "alertmanager", "runner"]
+  domain_names = ["www", "app", "gitlab", "prometheus", "grafana", "alertmanager"]
 }
 
 resource "yandex_dns_recordset" "rs" {
@@ -153,6 +169,7 @@ resource "yandex_compute_instance" "nginx" {
     subnet_id      = yandex_vpc_subnet.subnet-a.id
     ip_address     = "192.168.30.8"
     nat_ip_address = yandex_vpc_address.app_ip_address.external_ipv4_address[0].address
+
     #    nat            = true
   }
   metadata = {
@@ -235,8 +252,7 @@ resource "yandex_compute_instance" "gitlab" {
   }
   boot_disk {
     initialize_params {
-      #      image_id = "fd8mf4ur8epk3qdq3jlk" # Gitlab 15.3
-      image_id = "fd80f9vs6djfdpqmkqi8" # образ настроенного Gitlab в моем каталоге
+      image_id = "fd8mf4ur8epk3qdq3jlk" # Gitlab 15.3
       size     = 40
     }
   }
@@ -311,3 +327,32 @@ resource "yandex_compute_instance" "app" {
   }
 }
 
+# Monitoring host 
+resource "yandex_compute_instance" "monitoring" {
+  allow_stopping_for_update = true
+  name                      = "monitoring"
+  platform_id               = "standard-v1"
+  zone                      = "ru-central1-b"
+  hostname                  = "monitoring"
+  resources {
+    cores         = 4
+    memory        = 4
+    core_fraction = 5
+  }
+  boot_disk {
+    initialize_params {
+      image_id = "fd8le2jsge1bop4m18ts" # Debian 11
+      size     = 40
+    }
+  }
+  network_interface {
+    subnet_id = yandex_vpc_subnet.subnet-b.id
+    nat       = false
+  }
+  metadata = {
+    user-data = "${file("cloud-config.yml")}"
+  }
+  scheduling_policy {
+    preemptible = false
+  }
+}

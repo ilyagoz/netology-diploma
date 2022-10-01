@@ -1,0 +1,38 @@
+server {
+    server_name {{ config.prometheus_domain }};
+    access_log /var/log/nginx/{{ config.prometheus_domain }}.log;
+    error_log /var/log/nginx/{{ config.prometheus_domain }}.log;
+
+    location / {
+        set $upstream_endpoint http://{{ config.monitoring_upstream }}:9090;
+        proxy_pass $upstream_endpoint;
+
+        ## proxy_pass http://gitlab;
+
+        client_max_body_size 0;
+        gzip off;
+
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+        proxy_redirect off;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Ssl on;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering off;
+        proxy_http_version 1.1;
+
+    }
+
+
+## These should be set by Certbot
+#    listen 443 ssl; 
+#    ssl_certificate /etc/letsencrypt/live/{{ config.gitlab_domain }}/fullchain.pem; 
+#    ssl_certificate_key /etc/letsencrypt/live/{{ config.gitlab_domain }}/privkey.pem;
+#    include /etc/letsencrypt/options-ssl-nginx.conf;
+#    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
+
+}

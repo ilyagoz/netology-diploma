@@ -9,13 +9,7 @@ terraform {
       version = "2.2.3"
     }
 
-    virtualbox = {
-      source  = "terra-farm/virtualbox"
-      version = "0.2.2-alpha.1"
-    }
-
   }
-
 
   backend "s3" {
     endpoint = "storage.yandexcloud.net"

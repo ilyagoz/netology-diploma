@@ -39,41 +39,35 @@
         owner: root
         group: root
 
-- name: Creating app.conf
+- name: Create server .conf files
   become: true
-  block:
-    - name: templating
-      ansible.builtin.template:
-        src: app.conf.j2
-        dest: /etc/nginx/sites-available/app.conf
-        backup: true
-        mode: 0644
-        owner: root
-    - name: linking
-      ansible.builtin.file:
-        src: /etc/nginx/sites-available/app.conf
-        dest: /etc/nginx/sites-enabled/app.conf
-        owner: root
-        group: root
-        state: link
+  ansible.builtin.template:
+    src: "{{ item }}.conf.j2"
+    dest: "/etc/nginx/sites-available/{{ item }}.conf"
+    backup: true
+    mode: 0644
+    owner: root
+  loop:
+    - app
+    - gitlab
+    - prometheus
+    - alertmanager
+    - grafana
 
-- name: Creating gitlab.conf
+- name: link server .conf files
   become: true
-  block:
-    - name: templating
-      ansible.builtin.template:
-        src: gitlab.conf.j2
-        dest: /etc/nginx/sites-available/gitlab.conf
-        backup: true
-        mode: 0644
-        owner: root
-    - name: linking
-      ansible.builtin.file:
-        src: /etc/nginx/sites-available/gitlab.conf
-        dest: /etc/nginx/sites-enabled/gitlab.conf
-        owner: root
-        group: root
-        state: link
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ item }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item }}.conf"
+    owner: root
+    group: root
+    state: link
+  loop:
+    - app
+    - gitlab
+    - prometheus
+    - alertmanager
+    - grafana
 
 - name: Install snapd
   become: true
@@ -105,14 +99,14 @@
     path: "/usr/bin/certbot"
 - name: Install letsencrypt certificates
   # Yes, we know about ansible.builtin.acme_certificate. We just aren't using it.
-  # letsencrypt_use_stage
-  block:
-    - name: "{{ config.gitlab_domain }}"
-      ansible.builtin.command:
-        cmd: "sudo certbot --nginx --noninteractive --agree-tos {{ config.certbot_args }} -d {{ config.gitlab_domain }}"
-    - name: "{{ config.www_domain }}"
-      ansible.builtin.command:
-        cmd: "sudo certbot --nginx --noninteractive --agree-tos {{ config.certbot_args }} -d {{ config.www_domain }}"
+  ansible.builtin.command:
+    cmd: "sudo certbot --nginx --noninteractive --agree-tos {{ config.certbot_args }} -d {{ item }}"
+  loop:
+    - "{{ config.www_domain }}"
+    - "{{ config.gitlab_domain }}"
+    - "{{ config.prometheus_domain }}"
+    - "{{ config.grafana_domain }}"
+    - "{{ config.alertmanager_domain }}"
 ##
 ## Так можно установить NGINX из собственного репозитория, а не из репозитория ОС.
 ##

@@ -239,7 +239,7 @@ external_url 'https://{{ config.gitlab_upstream }}'
 
 ### Monitoring settings
 ###! IP whitelist controlling access to monitoring endpoints
-# gitlab_rails['monitoring_whitelist'] = ['127.0.0.0/8', '::1/128']
+#gitlab_rails['monitoring_whitelist'] = ['192.168.0.0/24']
 
 ### Shutdown settings
 ###! Defines an interval to block healthcheck,
@@ -1996,7 +1996,7 @@ nginx['ssl_certificate_key'] = "/etc/ssl/private/ssl-cert-snakeoil.key"
 ###! Docs: https://docs.gitlab.com/ee/administration/high_availability
 # monitoring_role['enable'] = true
 
-# prometheus['enable'] = true
+prometheus['enable'] = false
 # prometheus['monitor_kubernetes'] = true
 # prometheus['username'] = 'gitlab-prometheus'
 # prometheus['group'] = 'gitlab-prometheus'
@@ -2073,7 +2073,7 @@ nginx['ssl_certificate_key'] = "/etc/ssl/private/ssl-cert-snakeoil.key"
 ### https://docs.gitlab.com/ee/administration/monitoring/prometheus/index.html#using-an-external-prometheus-server
 ### This value should be the address at which Prometheus is available to a GitLab Rails(Puma, Sidekiq) node.
 ################################################################################
-# gitlab_rails['prometheus_address'] = 'your.prom:9090'
+gitlab_rails['prometheus_address'] = '{{ config.monitoring_upstream }}:9090'
 
 ################################################################################
 ## Prometheus Alertmanager
@@ -2114,7 +2114,7 @@ nginx['ssl_certificate_key'] = "/etc/ssl/private/ssl-cert-snakeoil.key"
 # }
 
 ##! Advanced settings. Should be changed only if absolutely needed.
-# node_exporter['listen_address'] = 'localhost:9100'
+node_exporter['listen_address'] = 'localhost:9100'
 
 ##! Service name used to register Node Exporter as a Consul service
 # node_exporter['consul_service_name'] = 'node-exporter'
@@ -2191,8 +2191,8 @@ nginx['ssl_certificate_key'] = "/etc/ssl/private/ssl-cert-snakeoil.key"
 
 ##! Advanced settings. Should be changed only if absolutely needed.
 # gitlab_exporter['server_name'] = 'webrick'
-# gitlab_exporter['listen_address'] = 'localhost'
-# gitlab_exporter['listen_port'] = '9168'
+gitlab_exporter['listen_address'] = '0.0.0.0'
+gitlab_exporter['listen_port'] = '9168'
 
 ##! TLS settings.
 # gitlab_exporter['tls_enabled'] = false

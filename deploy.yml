@@ -1,0 +1,33 @@
+---
+# Серверы MySQL - мастер и реплика
+- hosts: db-main
+  roles:
+    - mysql_common
+    - mysql_source
+- hosts: db-repl
+  roles:
+    - mysql_common
+    - mysql_replica
+
+# GitLab и один GitLab Runner
+- hosts: gitlab
+  roles:
+    - gitlab
+- hosts: runner
+  roles:
+    - runner
+
+# Prometheus, Alert Manager и Grafana
+- hosts: monitoring
+  roles:
+    - monitoring
+
+# Основной обратный прокси
+- hosts: www
+  roles:
+    - nginx
+
+# Сервер приложения 
+- hosts: app
+  roles:
+    - wordpress

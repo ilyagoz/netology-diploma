@@ -92,7 +92,7 @@
   notify:
     - Restart MySQL
 
-- name: Create user for the application
+- name: Create MySQL user for the application
   community.mysql.mysql_user:
     name: "{{ config.mysql_app_user }}"
     host: "{{ config.app_upstream }}"
@@ -103,7 +103,92 @@
     login_user: root
     login_password: "{{ config.mysql_root_password }}"
 
+- name: Create MySQL user for Grafana
+  community.mysql.mysql_user:
+    name: "{{ config.my_sql_grafana_user }}"
+    host: "{{ config.monitoring_upstream }}"
+    password: "{{ config.my_sql_grafana_user_password }}"
+    priv: "*.*:PROCESS,REPLICATION CLIENT,SELECT"
+    state: present
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+
 - name: Ensure MySQL is running
+  become: true
   ansible.builtin.service:
     name: mysql
-    state: started
+    enabled: true
+    state: restarted
+
+- name: Create user for Node Exporter
+  become: true
+  ansible.builtin.user:
+    state: present
+    name: prometheus
+    append: true
+    create_home: false
+    system: true
+    shell: /bin/false
+    groups:
+      - prometheus
+
+- name: Create MySQL user for Node Exporter
+  community.mysql.mysql_user:
+    name: my_sql_node_exporter_user
+    host: "localhost"
+    password: "{{ config.my_sql_grafana_user_password }}" # TODO: сделать свой.
+    priv: "*.*:PROCESS,REPLICATION CLIENT,SELECT"
+    state: present
+    login_user: root
+    login_password: "{{ config.mysql_root_password }}"
+
+# Ref. https://mcs.mail.ru/docs/additionals/cases/cases-monitoring/case-mysql-exporter#
+- name: Download mysqld_exporter
+  ansible.builtin.unarchive:
+    src: "https://github.com/prometheus/mysqld_exporter/releases/download/v0.14.0/mysqld_exporter-0.14.0.linux-amd64.tar.gz"
+    remote_src: true
+    dest: /tmp
+    creates: /tmp/mysqld_exporter-0.14.0.linux-amd64/mysqld_exporter
+- name: oOo
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/mysqld_exporter-0.14.0.linux-amd64/mysqld_exporter
+    remote_src: true
+    dest: /usr/local/bin
+    group: prometheus
+    owner: prometheus
+    mode: 0755
+- name: oOo
+  become: true
+  ansible.builtin.file:
+    path: /usr/local/etc/.mysqld_exporter.cnf
+    state: absent
+- name: setting password for mysqld_exporter
+  become: true
+  ansible.builtin.blockinfile:
+    create: true
+    dest: /usr/local/etc/.mysqld_exporter.cnf
+    group: prometheus
+    owner: prometheus
+    mode: 0400
+    block: |
+      [client]
+      user=my_sql_node_exporter_user
+      password="{{ config.my_sql_grafana_user_password }}"
+
+- name: templating /etc/systemd/system/mysqld_exporter.service
+  become: true
+  ansible.builtin.template:
+    src: "mysqld_exporter.service.j2"
+    dest: "/etc/systemd/system/mysqld_exporter.service"
+    backup: false
+    mode: 0644
+    owner: root
+    group: root
+
+- name: Ensure mysqld_exporter is running
+  become: true
+  ansible.builtin.service:
+    name: mysqld_exporter.service
+    enabled: true
+    state: restarted

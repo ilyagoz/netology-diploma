@@ -1,6 +1,8 @@
 # Local .terraform directories
 **/.terraform/*
 
+**/.vscode/*
+
 # Local .vagrant directories
 **/.vagrant/*
 
@@ -37,3 +39,4 @@ override.tf.json
 
 # Certificates
 *.pem
+

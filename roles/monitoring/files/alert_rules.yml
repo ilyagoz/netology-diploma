@@ -1,0 +1,59 @@
+groups:
+  - name: alert_rules
+    rules:
+      - alert: PrometheusTargetMissing
+        expr: up == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Prometheus target missing (instance {{ $labels.instance }})
+          description: "A Prometheus target has disappeared. An exporter might be crashed.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+        # # Please add ignored mountpoints in node_exporter parameters like
+        # # "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|run)($|/)".
+        # # Same rule using "node_filesystem_free_bytes" will fire when disk fills for non-root users.
+      - alert: HostOutOfDiskSpace
+        expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of disk space (instance {{ $labels.instance }})
+          description: "Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: MysqlDown
+        expr: mysql_up == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: MySQL down (instance {{ $labels.instance }})
+          description: "MySQL instance is down on {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: MysqlSlaveIoThreadNotRunning
+        expr: mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_io_running == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: MySQL Slave IO thread not running (instance {{ $labels.instance }})
+          description: "MySQL Slave IO thread not running on {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: MysqlSlaveSqlThreadNotRunning
+        expr: mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_sql_running == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: MySQL Slave SQL thread not running (instance {{ $labels.instance }})
+          description: "MySQL Slave SQL thread not running on {{ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+      - alert: MysqlRestarted
+        expr: mysql_global_status_uptime < 60
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: MySQL restarted (instance {{ $labels.instance }})
+          description: "MySQL has just been restarted, less than one minute ago on {{ $labels.instance }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
