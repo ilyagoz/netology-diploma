@@ -361,7 +361,7 @@ db01.ru-central1.internal
 db02.ru-central1.internal
 ```  
 
-Проверьте доступ к серверам, запустив следующий скрипт на Ansible^
+Проверьте доступ к серверам, запустив следующий скрипт на Ansible:
 
 ```yaml
 - name: Check SSH connections to targets.
