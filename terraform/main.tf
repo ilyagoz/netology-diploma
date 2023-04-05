@@ -298,6 +298,7 @@ resource "yandex_compute_instance" "runner" {
   }
 }
 
+
 # Wordpress host.
 resource "yandex_compute_instance" "app" {
   allow_stopping_for_update = true
@@ -356,3 +357,4 @@ resource "yandex_compute_instance" "monitoring" {
     preemptible = false
   }
 }
+
